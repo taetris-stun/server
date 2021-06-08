@@ -2,27 +2,36 @@ import http from 'http'
 import express from 'express'
 import cors from 'cors'
 import crypto from 'crypto'
+import WebSocket from 'ws'
+import path from 'path'
 import { Server, matchMaker } from 'colyseus'
-
 import { GameRoom } from './room'
 
-export const serverSecret = crypto.randomBytes(30).toString('hex')
-const port = Number(process.env['PORT'] || 20605)
+const serverSecret = crypto.randomBytes(30).toString('hex')
+const portColyseus = Number(process.env['TAE_PORT_COLY'] || 3000)
+const portBridge = Number(process.env['TAE_PORT_BRIDGE'] || 3001)
 
-const server = express()
-server.set('trust proxy', 1)
-server.use(express.json())
-server.use(cors({
-  origin: '*'
-}))
 
-const colyseus = new Server({ server: http.createServer(server) })
+const bridge = new WebSocket.Server({ port: portBridge })
+bridge.on('connection', (socket: WebSocket) => {
+  console.log(`[taetris-stun] New shocker: ${socket.url}`)
+})
+console.log('[taetris-stun] Bridge on port ' + portBridge)
 
+
+const app = express()
+app.use(express.static(path.join(__dirname, '../public')))
+app.use(express.json())
+app.set('trust proxy', 1)
+app.use(cors({ origin: '*' }))
+
+const colyseus = new Server({ server: http.createServer(app) })
 colyseus.define('GameRoom', GameRoom).enableRealtimeListing()
-
-colyseus.listen(port)
-console.log('[taetris-stun] Listening on port ' + port)
+colyseus.listen(portColyseus)
+console.log('[taetris-stun] Listening on port ' + portColyseus)
 
 matchMaker.createRoom('GameRoom', { serverSecret }).then(() => {
   console.log('[taetris-stun] Created GameRoom')
 })
+
+export { serverSecret, bridge }
