@@ -1,6 +1,6 @@
 import { Room, Client, ServerError } from 'colyseus'
 import { GameRoomState, PlayerState } from './state'
-import { serverSecret } from './index'
+import { serverSecret, shockers, baseShockTime } from './index'
 import http from 'http'
 
 export class GameRoom extends Room<GameRoomState> {
@@ -33,6 +33,7 @@ export class GameRoom extends Room<GameRoomState> {
           player.alive = true
         })
       }
+
     })
 
     this.onMessage('canvas', (client: Client, canvas: string) => {
@@ -40,10 +41,19 @@ export class GameRoom extends Room<GameRoomState> {
     })
 
     this.onMessage('line', (client: Client, lineCount: number) => {
+
       this.state.players.forEach((player: PlayerState) => {
         if (player.alive && player.sessionId !== client.sessionId) {
-          // TODO: Contact shocker over bridge
+
           console.log(`[taetris-stun] Contacting shocker: ${player.shocker}`)
+          const shocker = shockers.get(player.shocker)
+
+          if (shocker && shocker.readyState === 1) {
+            shocker.send((lineCount * baseShockTime).toString())
+          } else {
+            console.log('[taetris-stun] Failed to find shocker')
+          }
+
         }
       })
     })
@@ -51,7 +61,6 @@ export class GameRoom extends Room<GameRoomState> {
     this.onMessage('gameover', (client: Client, score: number) => {
       this.state.players.get(client.sessionId).alive = false
       this.state.players.get(client.sessionId).score = score
-      this.broadcast('gameover', client.sessionId) // Tell everybody that player is dead
 
       // If everyone is dead reset the room
       let allDead = true
@@ -62,9 +71,10 @@ export class GameRoom extends Room<GameRoomState> {
       })
 
       if (allDead) {
-        // TODO: Broadcast winner
+        this.broadcast('reset')
         this.resetRoom()
       }
+
     })
   }
 
@@ -99,6 +109,7 @@ export class GameRoom extends Room<GameRoomState> {
     if (this.clients.length === 0) {
       this.resetRoom()
     }
+    
   }
 
   resetRoom() {

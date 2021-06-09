@@ -10,11 +10,16 @@ import { GameRoom } from './room'
 const serverSecret = crypto.randomBytes(30).toString('hex')
 const portColyseus = Number(process.env['TAE_PORT_COLY'] || 3000)
 const portBridge = Number(process.env['TAE_PORT_BRIDGE'] || 3001)
+const baseShockTime = 100 // ms
 
 
+const shockers = new Map<string, WebSocket>()
 const bridge = new WebSocket.Server({ port: portBridge })
 bridge.on('connection', (socket: WebSocket) => {
-  console.log(`[taetris-stun] New shocker: ${socket.url}`)
+  socket.on('message', (data: WebSocket.Data) => {
+    console.log(`[taetris-stun] New shocker: ${data as string}`)
+    shockers.set(data as string, socket)
+  })
 })
 console.log('[taetris-stun] Bridge on port ' + portBridge)
 
@@ -34,4 +39,4 @@ matchMaker.createRoom('GameRoom', { serverSecret }).then(() => {
   console.log('[taetris-stun] Created GameRoom')
 })
 
-export { serverSecret, bridge }
+export { serverSecret, shockers, baseShockTime }

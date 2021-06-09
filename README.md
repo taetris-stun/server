@@ -7,4 +7,5 @@ No README, fuck you
 - solder three remaining shockers
 - build out bridge system
 - write firmware for shockers
+- spectator mode
 - think about deploying @ party
