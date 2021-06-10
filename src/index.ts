@@ -10,7 +10,7 @@ import { GameRoom } from './room'
 const serverSecret = crypto.randomBytes(30).toString('hex')
 const portColyseus = Number(process.env['TAE_PORT_COLY'] || 3000)
 const portBridge = Number(process.env['TAE_PORT_BRIDGE'] || 3001)
-const baseShockTime = 100 // ms
+const baseShockTime = 10 // ms
 
 
 const shockers = new Map<string, WebSocket>()

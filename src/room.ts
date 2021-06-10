@@ -30,10 +30,11 @@ export class GameRoom extends Room<GameRoomState> {
         this.lock()
         this.broadcast('start')
         this.state.players.forEach((player: PlayerState) => {
-          player.alive = true
+          if (player.username !== 'spectator') {
+            player.alive = true
+          }
         })
       }
-
     })
 
     this.onMessage('canvas', (client: Client, canvas: string) => {
@@ -41,19 +42,20 @@ export class GameRoom extends Room<GameRoomState> {
     })
 
     this.onMessage('line', (client: Client, lineCount: number) => {
-
       this.state.players.forEach((player: PlayerState) => {
-        if (player.alive && player.sessionId !== client.sessionId) {
-
+        if (
+          player.alive 
+          && player.sessionId !== client.sessionId 
+          && player.username !== 'spectator'
+        ) {
           console.log(`[taetris-stun] Contacting shocker: ${player.shocker}`)
-          const shocker = shockers.get(player.shocker)
+          const shocker = shockers.get(player.shocker) // TODO: Fail safely
 
           if (shocker && shocker.readyState === 1) {
             shocker.send((lineCount * baseShockTime).toString())
           } else {
             console.log('[taetris-stun] Failed to find shocker')
           }
-
         }
       })
     })
@@ -63,18 +65,17 @@ export class GameRoom extends Room<GameRoomState> {
       this.state.players.get(client.sessionId).score = score
 
       // If everyone is dead reset the room
-      let allDead = true
+      let aliveCount = 0
       this.state.players.forEach((player: PlayerState) => {
         if (player.alive === true) {
-          allDead = false
+          aliveCount++
         }
       })
 
-      if (allDead) {
+      if (aliveCount < 2) {
         this.broadcast('reset')
         this.resetRoom()
       }
-
     })
   }
 
@@ -109,7 +110,6 @@ export class GameRoom extends Room<GameRoomState> {
     if (this.clients.length === 0) {
       this.resetRoom()
     }
-    
   }
 
   resetRoom() {
